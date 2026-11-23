@@ -34,6 +34,30 @@ object SystemVolume {
         true
     }.getOrDefault(false)
 
+    /**
+     * Extra software attenuation for the bottom of the stream, as an amplitude ratio for
+     * `AudioTrack.setVolume`. Android's lowest audible step is still room-filling on an Echo
+     * Show, so the first ~20% of the range is scaled down; the rest is untouched. Pure so the
+     * curve can be unit-tested without an AudioManager.
+     */
+    fun outputGain(index: Int, max: Int): Float {
+        if (max <= 1) return 1f
+        val fraction = index.toFloat() / max
+        return when {
+            fraction <= 0.07f -> 0.15f   // the stream's minimum audible step
+            fraction <= 0.14f -> 0.4f
+            fraction <= 0.21f -> 0.7f
+            else -> 1f
+        }
+    }
+
+    /** Software attenuation matching the current media-stream step. */
+    fun outputGain(context: Context): Float = runCatching {
+        val audio = context.getSystemService(AudioManager::class.java) ?: return 1f
+        if (audio.isVolumeFixed) return 1f
+        outputGain(audio.getStreamVolume(STREAM), audio.getStreamMaxVolume(STREAM))
+    }.getOrDefault(1f)
+
     /** Stream index -> 0..100, or null for a bogus range. */
     fun toPercent(index: Int, max: Int): Int? {
         if (max <= 0) return null

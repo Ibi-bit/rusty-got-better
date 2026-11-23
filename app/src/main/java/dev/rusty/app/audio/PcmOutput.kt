@@ -34,6 +34,23 @@ class PcmOutput {
         const val TARGET_BUFFER_MS = 1_000
         private const val BYTES_PER_SAMPLE = 4 // ENCODING_PCM_FLOAT
         private const val TAG = "PcmOutput"
+
+        /** The live track, so the service can apply the low-volume taper (see SystemVolume). */
+        @Volatile
+        private var active: PcmOutput? = null
+
+        /** Last requested taper; a track opened later picks it up in [init]. */
+        @Volatile
+        private var gain = 1f
+
+        /**
+         * Scales the current track after the system stream volume. Used only for the quiet floor
+         * at the bottom of the slider; safe to call without a session or from any thread.
+         */
+        fun setOutputGain(value: Float) {
+            gain = value.coerceIn(0f, 1f)
+            active?.applyGain(gain)
+        }
     }
 
     private val track: AudioTrack
@@ -85,6 +102,8 @@ class PcmOutput {
             throw IllegalStateException("AudioTrack not initialised (state $state, requested $bytes B)")
         }
         track = built
+        active = this
+        applyGain(gain)
         bufferFrames = built.bufferSizeInFrames
         tail = ReplayTail(bufferFrames * CHANNELS)
         Log.i(
@@ -153,6 +172,7 @@ class PcmOutput {
     }
 
     fun release() {
+        if (active === this) active = null
         playRequested = false
         pendingReplay = null
         try {
@@ -164,6 +184,14 @@ class PcmOutput {
         track.release()
         playing = false
         Log.i(TAG, "released")
+    }
+
+    private fun applyGain(value: Float) {
+        try {
+            track.setVolume(value)
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "setVolume on a dead track: $e")
+        }
     }
 
     private fun startTrack() {

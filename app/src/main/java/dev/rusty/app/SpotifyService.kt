@@ -15,6 +15,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import dev.rusty.app.audio.PcmOutput
 import java.util.UUID
 
 class SpotifyService : Service() {
@@ -63,6 +64,7 @@ class SpotifyService : Service() {
     /** Routes a media-stream change to the receiver: remember it for the next cast and echo it. */
     private fun onSystemVolumeChanged() {
         val percent = SystemVolume.percent(this) ?: return
+        PcmOutput.setOutputGain(SystemVolume.outputGain(this))
         NativeBridge.setStartupVolume(percent)
         if (percent == lastNativeVolumePercent) return   // our own write coming back
         lastNativeVolumePercent = percent
@@ -75,6 +77,7 @@ class SpotifyService : Service() {
         lastNativeVolumePercent = clamped
         NativeBridge.setStartupVolume(clamped)
         SystemVolume.setPercent(this, clamped)
+        PcmOutput.setOutputGain(SystemVolume.outputGain(this))
     }
 
     override fun onCreate() {
@@ -94,6 +97,7 @@ class SpotifyService : Service() {
             SystemVolume.percent(this)
                 ?: StartupVolumeSettings.percent(getSharedPreferences(PREFS_NAME, MODE_PRIVATE)),
         )
+        PcmOutput.setOutputGain(SystemVolume.outputGain(this))
         ContextCompat.registerReceiver(
             this,
             volumeObserver,

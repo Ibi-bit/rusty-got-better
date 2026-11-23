@@ -34,4 +34,19 @@ class SystemVolumeTest {
         assertNull(SystemVolume.toPercent(3, 0))
         assertNull(SystemVolume.toPercent(3, -1))
     }
+
+    @Test
+    fun tapersTheBottomOfAFifteenStepStream() {
+        assertEquals(0.15f, SystemVolume.outputGain(1, 15), 0.001f)
+        assertEquals(0.4f, SystemVolume.outputGain(2, 15), 0.001f)
+        assertEquals(0.7f, SystemVolume.outputGain(3, 15), 0.001f)
+        assertEquals(1f, SystemVolume.outputGain(4, 15), 0.001f)
+        assertEquals(1f, SystemVolume.outputGain(15, 15), 0.001f)
+    }
+
+    @Test
+    fun leavesASingleStepOrBogusStreamAlone() {
+        assertEquals(1f, SystemVolume.outputGain(1, 1), 0.001f)
+        assertEquals(1f, SystemVolume.outputGain(1, 0), 0.001f)
+    }
 }
