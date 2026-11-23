@@ -64,9 +64,15 @@ object SystemVolume {
         return (index.toDouble() / max * 100.0).roundToInt().coerceIn(0, 100)
     }
 
-    /** 0..100 -> the nearest stream index in 0..[max]. */
+    /**
+     * 0..100 -> the nearest stream index in 0..[max]. A non-zero percent never lands on 0:
+     * Spotify's 1% should be the quietest step, not mute (the taper in [outputGain] makes it
+     * genuinely quiet), while 0% still is mute.
+     */
     fun toIndex(percent: Int, max: Int): Int {
         if (max <= 0) return 0
-        return (percent.coerceIn(0, 100) / 100.0 * max).roundToInt().coerceIn(0, max)
+        val clamped = percent.coerceIn(0, 100)
+        if (clamped == 0) return 0
+        return (clamped / 100.0 * max).roundToInt().coerceIn(1, max)
     }
 }

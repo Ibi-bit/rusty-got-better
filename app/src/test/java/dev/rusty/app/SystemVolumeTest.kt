@@ -36,6 +36,14 @@ class SystemVolumeTest {
     }
 
     @Test
+    fun keepsANonZeroPercentAudible() {
+        assertEquals(0, SystemVolume.toIndex(0, 15))
+        assertEquals(1, SystemVolume.toIndex(1, 15))
+        assertEquals(1, SystemVolume.toIndex(6, 15))
+        assertEquals(15, SystemVolume.toIndex(100, 15))
+    }
+
+    @Test
     fun tapersTheBottomOfAFifteenStepStream() {
         assertEquals(0.15f, SystemVolume.outputGain(1, 15), 0.001f)
         assertEquals(0.4f, SystemVolume.outputGain(2, 15), 0.001f)
